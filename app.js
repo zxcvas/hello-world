@@ -6,8 +6,176 @@ function load(key, fallback) {
 function save(key, value) { localStorage.setItem(key, JSON.stringify(value)); }
 
 // State
-let habits  = load('habits', []);    // [{ id, name }]
-let records = load('records', {});   // { "YYYY-MM-DD": { habitId: bool } }
+let habits      = [];
+let records     = {};
+let currentUser = null;
+
+// ========== Crypto helpers (PBKDF2 via Web Crypto API) ==========
+
+function bufToHex(buf) {
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function hexToBuf(hex) {
+  const bytes = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < bytes.length; i++) bytes[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
+  return bytes;
+}
+
+function genSalt() {
+  return bufToHex(crypto.getRandomValues(new Uint8Array(16)));
+}
+
+async function deriveKey(password, saltHex) {
+  const enc = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw', enc.encode(password), 'PBKDF2', false, ['deriveBits']
+  );
+  const bits = await crypto.subtle.deriveBits(
+    { name: 'PBKDF2', salt: hexToBuf(saltHex), iterations: 100_000, hash: 'SHA-256' },
+    keyMaterial, 256
+  );
+  return bufToHex(bits);
+}
+
+// ========== Auth storage ==========
+
+function loadUsers() { return load('auth_users', {}); }
+function saveUsers(users) { save('auth_users', users); }
+
+// ========== Session (sessionStorage — clears on tab close) ==========
+
+function getSession()         { return sessionStorage.getItem('session_user'); }
+function setSession(username) { sessionStorage.setItem('session_user', username); }
+function clearSession()       { sessionStorage.removeItem('session_user'); }
+
+// ========== Per-user data ==========
+
+function loadUserData(username) {
+  currentUser = username;
+  habits  = load(`${username}_habits`, []);
+  records = load(`${username}_records`, {});
+}
+
+// Persist
+function saveAll() {
+  save(`${currentUser}_habits`, habits);
+  save(`${currentUser}_records`, records);
+}
+
+// ========== DOM toggles ==========
+
+function showAuth() {
+  document.getElementById('auth-screen').classList.remove('hidden');
+  document.getElementById('app').hidden = true;
+}
+
+function showApp() {
+  document.getElementById('auth-screen').classList.add('hidden');
+  document.getElementById('app').hidden = false;
+}
+
+function setAuthError(id, msg) {
+  const el = document.getElementById(id);
+  el.textContent = msg;
+  el.hidden = !msg;
+}
+
+// ========== Auth handlers ==========
+
+async function handleLogin(e) {
+  e.preventDefault();
+  const username = document.getElementById('login-username').value.trim();
+  const password = document.getElementById('login-password').value;
+
+  setAuthError('login-error', '');
+
+  if (!username || !password) {
+    setAuthError('login-error', 'Username and password are required.');
+    return;
+  }
+
+  const btn = document.getElementById('login-submit');
+  const origText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Logging in…';
+
+  try {
+    const users = loadUsers();
+    if (!users[username]) {
+      setAuthError('login-error', 'No account found with that username.');
+      return;
+    }
+    const hash = await deriveKey(password, users[username].salt);
+    if (hash !== users[username].hash) {
+      setAuthError('login-error', 'Incorrect password.');
+      return;
+    }
+    setSession(username);
+    loadUserData(username);
+    showApp();
+    showView('main');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = origText;
+  }
+}
+
+async function handleRegister(e) {
+  e.preventDefault();
+  const username = document.getElementById('reg-username').value.trim();
+  const password = document.getElementById('reg-password').value;
+
+  setAuthError('reg-error', '');
+
+  if (!username || !password) {
+    setAuthError('reg-error', 'Username and password are required.');
+    return;
+  }
+  if (!/^[A-Za-z0-9_-]+$/.test(username)) {
+    setAuthError('reg-error', 'Username may only contain letters, numbers, _ and -.');
+    return;
+  }
+
+  const users = loadUsers();
+  if (users[username]) {
+    setAuthError('reg-error', 'That username is already taken.');
+    return;
+  }
+
+  const btn = document.getElementById('reg-submit');
+  const origText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Creating account…';
+
+  try {
+    const salt = genSalt();
+    const hash = await deriveKey(password, salt);
+    users[username] = { salt, hash };
+    saveUsers(users);
+    setSession(username);
+    loadUserData(username);
+    showApp();
+    showView('main');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = origText;
+  }
+}
+
+function handleLogout() {
+  clearSession();
+  currentUser = null;
+  habits  = [];
+  records = {};
+  showAuth();
+  document.getElementById('login-form').reset();
+  document.getElementById('register-form').reset();
+  setAuthError('login-error', '');
+  setAuthError('reg-error', '');
+}
+
+// ========== Date helpers ==========
 
 function today() {
   return new Date().toISOString().slice(0, 10);
@@ -23,22 +191,15 @@ function uid() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 }
 
-// Persist
-function saveAll() {
-  save('habits', habits);
-  save('records', records);
-}
+// ========== Streak logic ==========
 
-// Streak calculation: consecutive days ending on yesterday (or today if checked)
 function computeStreak(habitId) {
   const t = today();
   const days = Object.keys(records).sort();
   if (!days.length) return 0;
 
-  // Build a set of dates this habit was checked
   const checked = new Set(days.filter(d => records[d]?.[habitId]));
 
-  // Walk backwards from today
   let streak = 0;
   let cur = new Date(t + 'T00:00:00');
   while (true) {
@@ -50,7 +211,6 @@ function computeStreak(habitId) {
       // Allow today to be incomplete without breaking the streak
       if (iso === t && streak === 0) {
         cur.setDate(cur.getDate() - 1);
-        // check yesterday; if not checked, streak is 0
         const yIso = cur.toISOString().slice(0, 10);
         if (!checked.has(yIso)) break;
       } else {
@@ -80,7 +240,6 @@ function streakClass(streak) {
   return '';
 }
 
-// Next milestone info for progress bar
 function nextMilestone(streak) {
   const targets = [7, 14, 31, 365];
   const next = targets.find(t => t > streak);
@@ -90,11 +249,11 @@ function nextMilestone(streak) {
   return { target: next, pct };
 }
 
-// === Render helpers ===
+// ========== Render helpers ==========
 
 function renderMain() {
-  const list   = document.getElementById('habit-list');
-  const empty  = document.getElementById('empty-main');
+  const list     = document.getElementById('habit-list');
+  const empty    = document.getElementById('empty-main');
   const todayStr = today();
 
   document.getElementById('today-date').textContent = dateLabel(todayStr);
@@ -135,10 +294,8 @@ function renderStats() {
     const sc     = streakClass(streak);
     const ms     = getMilestone(streak);
     const { target, pct } = nextMilestone(streak);
-    const label  = streak === 1 ? '1 day streak' : `${streak} day streak`;
     const nextLbl = streak < 365 ? `${pct}% to ${target}-day milestone` : 'Max milestone reached!';
 
-    // Last 28 days mini heatmap
     const cells = Array.from({ length: 28 }, (_, i) => {
       const d = new Date();
       d.setDate(d.getDate() - (27 - i));
@@ -193,7 +350,7 @@ function escHtml(s) {
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-// === Actions ===
+// ========== Actions ==========
 
 function toggleHabit(id) {
   const todayStr = today();
@@ -216,23 +373,20 @@ function addHabit(name) {
 function deleteHabit(id) {
   if (!confirm('Delete this habit? All its history will be removed.')) return;
   habits = habits.filter(h => h.id !== id);
-  // Purge from records
-  for (const day of Object.keys(records)) {
-    delete records[day][id];
-  }
+  for (const day of Object.keys(records)) delete records[day][id];
   saveAll();
   renderSettings();
   renderMain();
   renderStats();
 }
 
-// === Navigation ===
+// ========== Navigation ==========
 
 const views = { main: 'view-main', stats: 'view-stats', settings: 'view-settings' };
 
 function showView(name) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.nav-btn[data-view]').forEach(b => b.classList.remove('active'));
   document.getElementById(views[name]).classList.add('active');
   document.querySelector(`.nav-btn[data-view="${name}"]`).classList.add('active');
 
@@ -241,9 +395,27 @@ function showView(name) {
   if (name === 'settings') renderSettings();
 }
 
-// === Init ===
+// ========== Init ==========
 
-document.querySelectorAll('.nav-btn').forEach(btn => {
+// Auth tab toggle
+document.querySelectorAll('.auth-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    const isLogin = tab.dataset.tab === 'login';
+    document.getElementById('login-form').hidden = !isLogin;
+    document.getElementById('register-form').hidden = isLogin;
+    setAuthError('login-error', '');
+    setAuthError('reg-error', '');
+  });
+});
+
+document.getElementById('login-form').addEventListener('submit', handleLogin);
+document.getElementById('register-form').addEventListener('submit', handleRegister);
+document.getElementById('logout-btn').addEventListener('click', handleLogout);
+
+// Nav (data-view selector excludes the logout button)
+document.querySelectorAll('.nav-btn[data-view]').forEach(btn => {
   btn.addEventListener('click', () => showView(btn.dataset.view));
 });
 
@@ -254,5 +426,12 @@ document.getElementById('add-habit-form').addEventListener('submit', e => {
   input.value = '';
 });
 
-// Initial render
-renderMain();
+// Boot: restore session or show auth screen
+const existingSession = getSession();
+if (existingSession) {
+  loadUserData(existingSession);
+  showApp();
+  showView('main');
+} else {
+  showAuth();
+}

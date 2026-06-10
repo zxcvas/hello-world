@@ -7,11 +7,43 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div id="app">
+  <!-- Auth screen (shown when logged out) -->
+  <div id="auth-screen">
+    <div class="auth-card">
+      <h1 class="auth-title">Habit Tracker</h1>
+      <div class="auth-tabs">
+        <button class="auth-tab active" data-tab="login">Login</button>
+        <button class="auth-tab" data-tab="register">Register</button>
+      </div>
+      <form id="login-form" class="auth-form">
+        <label class="auth-label" for="login-username">Username</label>
+        <input id="login-username" class="auth-input" type="text"
+               autocomplete="username" autocapitalize="none" required />
+        <label class="auth-label" for="login-password">Password</label>
+        <input id="login-password" class="auth-input" type="password"
+               autocomplete="current-password" required />
+        <p id="login-error" class="auth-error" hidden></p>
+        <button type="submit" class="btn-auth" id="login-submit">Login</button>
+      </form>
+      <form id="register-form" class="auth-form" hidden>
+        <label class="auth-label" for="reg-username">Username</label>
+        <input id="reg-username" class="auth-input" type="text"
+               autocomplete="username" autocapitalize="none" required />
+        <label class="auth-label" for="reg-password">Password</label>
+        <input id="reg-password" class="auth-input" type="password"
+               autocomplete="new-password" required />
+        <p id="reg-error" class="auth-error" hidden></p>
+        <button type="submit" class="btn-auth" id="reg-submit">Create Account</button>
+      </form>
+    </div>
+  </div>
+
+  <div id="app" hidden>
     <nav class="nav">
       <button class="nav-btn active" data-view="main">Today</button>
       <button class="nav-btn" data-view="stats">Streaks</button>
       <button class="nav-btn" data-view="settings">Settings</button>
+      <button id="logout-btn" class="nav-btn nav-btn--logout">Logout</button>
     </nav>
 
     <!-- Main view -->
