@@ -1,0 +1,286 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0f1117;
+  --surface: #1a1d27;
+  --surface2: #22263a;
+  --border: #2e3350;
+  --accent: #6c63ff;
+  --accent-hover: #857ef5;
+  --danger: #e05c6f;
+  --text: #e8eaf6;
+  --muted: #7b82a8;
+  --green: #4caf87;
+  --gold: #f0b429;
+  --radius: 12px;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+}
+
+#app {
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* Nav */
+.nav {
+  display: flex;
+  gap: 4px;
+  padding: 12px 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.nav-btn {
+  flex: 1;
+  padding: 8px 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.nav-btn:hover { background: var(--surface2); color: var(--text); }
+.nav-btn.active { background: var(--accent); color: #fff; }
+
+/* Views */
+.view { display: none; padding: 20px 16px; flex-direction: column; gap: 12px; }
+.view.active { display: flex; }
+
+.view-title {
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.view-title span {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--muted);
+  margin-left: 6px;
+}
+
+/* Habit list (main) */
+.habit-list, .settings-list, .streak-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.habit-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  user-select: none;
+}
+
+.habit-item:hover { border-color: var(--accent); }
+
+.habit-item.checked {
+  border-color: var(--green);
+  background: color-mix(in srgb, var(--green) 8%, var(--surface));
+}
+
+.habit-checkbox {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  border: 2px solid var(--border);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.15s, background 0.15s;
+  font-size: 14px;
+}
+
+.habit-item.checked .habit-checkbox {
+  border-color: var(--green);
+  background: var(--green);
+  color: #fff;
+}
+
+.habit-name {
+  font-size: 16px;
+  font-weight: 500;
+  flex: 1;
+}
+
+.habit-item.checked .habit-name {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+/* Settings list */
+.settings-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+}
+
+.settings-item .habit-name { font-size: 15px; }
+
+.btn-delete {
+  background: transparent;
+  border: 1px solid var(--danger);
+  color: var(--danger);
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+
+.btn-delete:hover { background: color-mix(in srgb, var(--danger) 15%, transparent); }
+
+/* Add form */
+.add-form {
+  display: flex;
+  gap: 8px;
+}
+
+.add-form input {
+  flex: 1;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  color: var(--text);
+  font-size: 15px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.add-form input:focus { border-color: var(--accent); }
+.add-form input::placeholder { color: var(--muted); }
+
+.btn-add {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 18px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+
+.btn-add:hover { background: var(--accent-hover); }
+
+/* Streak list */
+.streak-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.streak-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.streak-name { font-size: 16px; font-weight: 600; }
+
+.streak-count {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.streak-count.fire-7  { color: var(--gold); }
+.streak-count.fire-14 { color: #ff9f43; }
+.streak-count.fire-31 { color: #ee5a24; }
+.streak-count.fire-365 { color: #fd79a8; }
+
+.streak-label { font-size: 12px; color: var(--muted); }
+
+.streak-bar-track {
+  height: 6px;
+  background: var(--surface2);
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.streak-bar-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 99px;
+  transition: width 0.4s ease;
+}
+
+.streak-milestone {
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 12px;
+  border-radius: 8px;
+  text-align: center;
+  background: color-mix(in srgb, var(--gold) 12%, var(--surface2));
+  color: var(--gold);
+  border: 1px solid color-mix(in srgb, var(--gold) 30%, transparent);
+  line-height: 1.4;
+}
+
+.streak-milestone.level-7  { --c: var(--gold); }
+.streak-milestone.level-14 { --c: #ff9f43; background: color-mix(in srgb, #ff9f43 12%, var(--surface2)); color: #ff9f43; border-color: color-mix(in srgb, #ff9f43 30%, transparent); }
+.streak-milestone.level-31 { --c: #ee5a24; background: color-mix(in srgb, #ee5a24 12%, var(--surface2)); color: #ee5a24; border-color: color-mix(in srgb, #ee5a24 30%, transparent); }
+.streak-milestone.level-365 { --c: #fd79a8; background: color-mix(in srgb, #fd79a8 12%, var(--surface2)); color: #fd79a8; border-color: color-mix(in srgb, #fd79a8 30%, transparent); }
+
+/* Grid heatmap */
+.streak-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+
+.grid-cell {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  background: var(--surface2);
+}
+
+.grid-cell.on { background: var(--green); }
+
+/* Empty state */
+.empty-msg {
+  color: var(--muted);
+  font-size: 14px;
+  text-align: center;
+  padding: 32px 0;
+}
