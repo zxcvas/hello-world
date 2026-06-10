@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Habit Tracker</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="app">
+    <nav class="nav">
+      <button class="nav-btn active" data-view="main">Today</button>
+      <button class="nav-btn" data-view="stats">Streaks</button>
+      <button class="nav-btn" data-view="settings">Settings</button>
+    </nav>
+
+    <!-- Main view -->
+    <section id="view-main" class="view active">
+      <h1 class="view-title">Today <span id="today-date"></span></h1>
+      <ul id="habit-list" class="habit-list"></ul>
+      <p id="empty-main" class="empty-msg" hidden>
+        No habits yet — add some in Settings.
+      </p>
+    </section>
+
+    <!-- Stats view -->
+    <section id="view-stats" class="view">
+      <h1 class="view-title">Streaks</h1>
+      <ul id="streak-list" class="streak-list"></ul>
+      <p id="empty-stats" class="empty-msg" hidden>
+        No habits yet — add some in Settings.
+      </p>
+    </section>
+
+    <!-- Settings view -->
+    <section id="view-settings" class="view">
+      <h1 class="view-title">Settings</h1>
+      <form id="add-habit-form" class="add-form">
+        <input
+          id="new-habit-name"
+          type="text"
+          placeholder="New habit name…"
+          maxlength="60"
+          autocomplete="off"
+        />
+        <button type="submit" class="btn-add">Add</button>
+      </form>
+      <ul id="settings-habit-list" class="settings-list"></ul>
+      <p id="empty-settings" class="empty-msg" hidden>
+        No habits yet. Add your first one above!
+      </p>
+    </section>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
